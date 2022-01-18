@@ -29,7 +29,8 @@ Session.configure(bind=engine)
 baskets = {
     2: {
         51: 1,
-        55: 2
+        55: 2,
+        81: 1
     }
 }
 
@@ -170,3 +171,24 @@ def add_to_basket(user_id: str, items: list):
     for dic in items:
         amount = 0 if int(dic["id"]) not in basket else basket[int(dic["id"])]
         basket[int(dic["id"])] = amount + int(dic["amount"])
+
+
+def update_basket(user_id, article_id, new_amount):
+    basket = baskets[user_id]
+    if new_amount > 0:
+        basket[article_id] = new_amount
+    else:
+        del basket[article_id]
+
+
+def get_payment(user_id):
+    return [{
+        'id': 1,
+        'type': 'card',
+        'four-digits': 1111
+
+    }, {
+        'id': 2,
+        'type': 'other',
+        'name': 'Przelewy24'
+    }]

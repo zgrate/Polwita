@@ -44,5 +44,46 @@ def add_to_basket():
     return {}
 
 
+@app.route("/update_get_basket/<user_id>")
+def update_get_basket(user_id):
+    database.update_basket(int(user_id), int(request.args["article"]), int(request.args["new_amount"]))
+    return get_basket(user_id)
+
+
+@app.route("/delivery_forms")
+def delivery_forms():
+    return {"deliveries": [{
+        "id": 1,
+        "name": "PP Paczka 24",
+        "price": 10.30,
+        "prepaid": False
+    }, {
+        "id": 2,
+        "name": "PP Paczka 48",
+        "price": 8.30,
+        "prepaid": False
+    }, {
+        "id": 3,
+        "name": "PP Paczka 48 za pobraniem",
+        "price": 13.0,
+        "prepaid": True
+    }, {
+        "id": 4,
+        "name": "Inpost Paczkomat",
+        "price": 8.0,
+        "prepaid": False
+    }, {
+        "id": 5,
+        "name": "Inpost Paczkomat Pobranie",
+        "price": 11.0,
+        "prepaid": True
+    }]}
+
+
+@app.route("/payments/<user_id>")
+def get_payment_methods(user_id):
+    return {'payments': database.get_payment(user_id)}
+
+
 if __name__ == '__main__':
     app.run()
