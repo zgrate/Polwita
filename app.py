@@ -14,7 +14,6 @@ def hello_world():  # put application's code here
 
 @app.route('/get_basket/<id>')
 def get_basket(id: int):
-    print(id)
     return {"basket": database.get_basket(id)}
 
 
@@ -85,5 +84,34 @@ def get_payment_methods(user_id):
     return {'payments': database.get_payment(user_id)}
 
 
-if __name__ == '__main__':
-    app.run()
+@app.route("/order/<user_id>", methods=["POST"])
+def order(user_id):
+    if request.json is None:
+        return {}, 400
+    print(request.json)
+    parsed = parse_required_fields(request.json,
+                                   ["name", "address", "postcode", "city", "delivery_method", "payment_method"])
+    print(parsed)
+    if parsed is None:
+        return {}, 400
+
+    if database.order(parsed, user_id):
+        return {}, 200
+    else:
+        return {}, 400
+
+
+def parse_required_fields(json, fields):
+    if json is None:
+        return None
+    parsed = {}
+    for f in fields:
+        if f not in json:
+            return None
+        else:
+            parsed[f] = json[f]
+    return parsed
+
+
+if __name__ == 'app':
+    database.configure_remote_db()

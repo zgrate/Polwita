@@ -1,11 +1,14 @@
+import datetime
 import os
 import random
 from typing import Optional
 
 import bcrypt as bcrypt
+import sqlalchemy
 from faker import Faker
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Query
+from sqlalchemy.future import Engine
+from sqlalchemy.orm import sessionmaker
 
 from classes import *
 
@@ -17,14 +20,27 @@ HOST = "vps.zgrate.ovh"
 PORT = 3306
 DB_NAME = "Polwita"
 
-Base = declarative_base()
+engine: Engine
+Session: sessionmaker = sessionmaker()
 
-engine = create_engine(f"mysql+mysqldb://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}")
-engine.connect()
 
-Session = sessionmaker()
+def createTables():
+    Base.metadata.create_all(engine, tables=Base.metadata.tables.values(), checkfirst=True)
 
-Session.configure(bind=engine)
+
+def configure_in_memory_db():
+    global engine
+    engine = create_engine('sqlite:///:memory:', echo=True)
+    engine.connect()
+    Session.configure(bind=engine)
+
+
+def configure_remote_db():
+    engine = create_engine(f"mysql+mysqldb://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}")
+    engine.connect()
+    Session.configure(bind=engine)
+    print("TEST")
+
 
 baskets = {
     2: {
@@ -156,15 +172,6 @@ def get_e_recepta(numer, pesel):
         return {}
 
 
-print(get_articles(['53', '55', '58']))
-with Session() as session:
-    query: Query = session.query(Artykul)
-    print(query.filter(Artykul.IdT == 51).all())
-
-    print(query.count())
-    print(session.query(Artykul).filter(Artykul.IdT.in_([51])).all())
-
-
 def add_to_basket(user_id: str, items: list):
     basket = baskets[int(user_id)]
     print(items)
@@ -192,3 +199,54 @@ def get_payment(user_id):
         'type': 'other',
         'name': 'Przelewy24'
     }]
+
+
+def order(json: dict, user_id):
+    # ["name", "address", "postcode", "city", "delivery_method", "payment_method"]
+    session: sqlalchemy.orm.Session
+    with Session() as session:
+        session.begin()
+        zam = Zamowienie()
+
+        zam.DataZlozenia = datetime.datetime.now()
+        zam.UzytkownicyIdK = user_id
+        zam.StatusZamowienia = 1
+        zam.IdZ = 0
+        check: sqlalchemy.orm.Session
+        with Session() as check:
+            while zam.IdZ == 0:
+                i = random.randint(0, 0xffffff)
+                if check.query(Zamowienie).get(i) is None:
+                    zam.IdZ = i
+
+        def toOBM(d: dict):
+            artykulWZam = ArtykulWZamowieniu()
+            artykulWZam.TowaryIdT = d["id"]
+            artykulWZam.LiczbaSzt = d["amount"]
+            artykulWZam.CenaWZamowieniu = d["article"]["Cena"]
+            artykulWZam.ZamowieniaIdZ = zam.IdZ
+            return artykulWZam
+
+        dostawa = Dostawa()
+        dostawa.ZamowienieIdZ = zam.IdZ
+        dostawa.AdresDostawy = json['address'] + " " + json["city"] + " " + json["postcode"]
+        dostawa.SposobDostawy = json["delivery_method"]["name"]
+        dostawa.CenaDostawy = int(float(json["delivery_method"]["price"]) * 100)
+        dostawa.PlatnoscPobranie = json["delivery_method"]["prepaid"]
+
+        koszyk = get_basket(user_id)
+
+        suma = sum(float(x["article"]["Cena"]) for x in koszyk) + int(dostawa.CenaDostawy)
+
+        platnosc = Platnosc()
+        platnosc.ZamowienieIdZ = zam.IdZ
+        platnosc.Wartosc = suma
+        platnosc.Status = "NIEOPLACONE"
+
+        artykuly = list(map(toOBM, koszyk))
+        session.add(zam)
+        session.add(dostawa)
+        session.add(platnosc)
+        session.add_all(artykuly)
+        session.commit()
+        return True

@@ -1,6 +1,6 @@
 # coding: utf-8
-from sqlalchemy import Column, Date, Float, ForeignKey, Integer, String, Table
-from sqlalchemy.dialects.mysql import BIT
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer, String, text
+from sqlalchemy.dialects.mysql import BIT, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -15,17 +15,8 @@ class Artykul(Base):
     Nazwa = Column(String(60), nullable=False)
     Cena = Column(Float(asdecimal=True))
     LiczbaSzt = Column(Integer)
-    KodKreskowy = Column(String(20), nullable=False, unique=True)
+    KodKreskowy = Column(VARCHAR(20), nullable=False, unique=True, server_default=text("''"))
     CzyRecepta = Column(BIT(1))
-
-    # def __dict__(self):
-    #     return {
-    #         "IdT": self.IdT,
-    #         "Nazwa": self.Nazwa,
-    #         "Cena": self.Cena,
-    #         "LiczbaSzt": self.LiczbaSzt
-    #
-    #     }
 
 
 class RodzajUzytkownika(Base):
@@ -85,31 +76,38 @@ class ArtykulWZamowieniu(Base):
     Zamowienie = relationship('Zamowienie')
 
 
-t_Dostawa = Table(
-    'Dostawa', metadata,
-    Column('ZamowienieIdZ', ForeignKey('Zamowienie.IdZ'), nullable=False, index=True),
-    Column('SposobDostawy', String(4)),
-    Column('CenaDostawy', Integer),
-    Column('AdresDostawy', String(100)),
-    Column('PlatnoscPobranie', BIT(1))
-)
+class Dostawa(Base):
+    __tablename__ = 'Dostawa'
+
+    IdD = Column(Integer, primary_key=True, unique=True)
+    ZamowienieIdZ = Column(ForeignKey('Zamowienie.IdZ'), nullable=False, index=True)
+    SposobDostawy = Column(String(100))
+    CenaDostawy = Column(Integer)
+    AdresDostawy = Column(String(100))
+    PlatnoscPobranie = Column(BIT(1))
+
+    Zamowienie = relationship('Zamowienie')
 
 
 class Platnosc(Base):
     __tablename__ = 'Platnosc'
 
     ZamowienieIdZ = Column(ForeignKey('Zamowienie.IdZ'), nullable=False, index=True)
-    IdPlatnosci = Column(Integer, primary_key=True)
     Wartosc = Column(Integer)
-    Status = Column(String(10))
+    Status = Column(String(100))
+    Status = Column(String(100))
+    IdP = Column(Integer, primary_key=True, unique=True)
 
     Zamowienie = relationship('Zamowienie')
 
 
-t_Reklamacja = Table(
-    'Reklamacja', metadata,
-    Column('ZamowieniaIdZ', ForeignKey('Zamowienie.IdZ'), nullable=False, unique=True),
-    Column('KwotaZwrotu', Float(asdecimal=True), nullable=False),
-    Column('PowodZwrotu', Integer, nullable=False),
-    Column('DodatkoweInformacje', String(255))
-)
+class Reklamacja(Base):
+    __tablename__ = 'Reklamacja'
+
+    ZamowieniaIdZ = Column(ForeignKey('Zamowienie.IdZ'), nullable=False, unique=True)
+    KwotaZwrotu = Column(Float(asdecimal=True), nullable=False)
+    PowodZwrotu = Column(Integer, nullable=False)
+    DodatkoweInformacje = Column(String(255))
+    IdR = Column(Integer, primary_key=True, unique=True)
+
+    Zamowienie = relationship('Zamowienie')
