@@ -25,10 +25,16 @@ Session: sessionmaker = sessionmaker()
 
 
 def createTables():
+    """
+    Creates tables in the system
+    """
     Base.metadata.create_all(engine, tables=Base.metadata.tables.values(), checkfirst=True)
 
 
 def configure_in_memory_db():
+    """
+    Configures in-memory database for usage in testing
+    """
     global engine
     engine = create_engine('sqlite:///:memory:', echo=True)
     engine.connect()
@@ -36,6 +42,9 @@ def configure_in_memory_db():
 
 
 def configure_remote_db():
+    """
+    Configures real DB
+    """
     engine = create_engine(f"mysql+mysqldb://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}")
     engine.connect()
     Session.configure(bind=engine)
@@ -52,6 +61,11 @@ baskets = {
 
 
 def row2dict(row):
+    """
+    Converts row objects (Table) to dictionary
+    :param row: Row-object of table
+    :return: dict
+    """
     d = {}
     for column in row.__table__.columns:
         d[column.name] = str(getattr(row, column.name))
@@ -60,6 +74,11 @@ def row2dict(row):
 
 
 def get_basket(id):
+    """
+    Returns the basket of given user
+    :param id: Id of the user
+    :return: Basket in the system as an array of {id: int, article: Article, amount: int} or empty array if not found
+    """
     print(baskets.get(int(id)))
     basket = baskets.get(int(id))
     if basket is None:
@@ -77,11 +96,22 @@ def get_basket(id):
 
 
 def get_article(id):
+    """
+    Query article from DB
+    :param id: Id of the article
+    :return: Article Object
+    """
     with Session() as session:
         return session.query(Artykul).get(id)
 
 
 def get_articles(list_ids: list[str]):
+    """
+    Get all the articles from the database, that matches IDs in the list
+    :param list_ids: list of ids
+    :return: list of article
+    """
+
     def str_to_id(s):
         try:
             return int(s)
@@ -97,6 +127,11 @@ def get_articles(list_ids: list[str]):
 
 
 def get_user(id):
+    """
+    Gets user from the DB
+    :param id: ID of the user
+    :return: User
+    """
     with Session() as session:
         user = session.query(Uzytkownik).get(id)
         d = row2dict(user) if user is not None else {}
@@ -106,6 +141,9 @@ def get_user(id):
 
 
 def fill_with_data():
+    """
+    Fills the DB using fake data
+    """
     fake = Faker(locale="pl_PL")
     print(dir(fake))
     session = Session()
@@ -146,24 +184,16 @@ def fill_with_data():
 
 
 def get_e_recepta(numer, pesel):
+    """
+    Fetches remote e-prescription
+    :param numer: Number of the prescription
+    :param pesel: Pesel
+    :return: List of article IDs with amount
+    """
     # connect_to_nfz()
     # fetch()
     # close()
     if numer == '1111':
-        # [
-        #     {
-        #         'item': row2dict(get_article(53)),
-        #         'amount': 1
-        #     },
-        #     {
-        #         'item': row2dict(get_article(55)),
-        #         'amount': 2
-        #     },
-        #     {
-        #         'item':  row2dict(get_article(58)),
-        #         'amount': 1
-        #     }
-        # ]
         return {
             53: 1, 55: 2, 58: 1
         }
@@ -173,6 +203,11 @@ def get_e_recepta(numer, pesel):
 
 
 def add_to_basket(user_id: str, items: list):
+    """
+    Adds item to the basket
+    :param user_id: user ID
+    :param items: Items to add
+    """
     basket = baskets[int(user_id)]
     print(items)
     for dic in items:
@@ -181,6 +216,12 @@ def add_to_basket(user_id: str, items: list):
 
 
 def update_basket(user_id, article_id, new_amount):
+    """
+    Updates basket with a new amount
+    :param user_id:  User ID
+    :param article_id: Article ID
+    :param new_amount: New amount
+    """
     basket = baskets[user_id]
     if new_amount > 0:
         basket[article_id] = new_amount
@@ -189,6 +230,11 @@ def update_basket(user_id, article_id, new_amount):
 
 
 def get_payment(user_id):
+    """
+    Gets payment methods of the user
+    :param user_id: User ID
+    :return:
+    """
     return [{
         'id': 1,
         'type': 'card',
@@ -202,6 +248,12 @@ def get_payment(user_id):
 
 
 def order(json: dict, user_id):
+    """
+    Executes order of items from the user
+    :param json: Json with all the data   ["name", "address", "postcode", "city", "delivery_method", "payment_method"]
+    :param user_id:
+    :return:
+    """
     # ["name", "address", "postcode", "city", "delivery_method", "payment_method"]
     session: sqlalchemy.orm.Session
     with Session() as session:

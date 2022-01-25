@@ -90,7 +90,7 @@ def order(user_id):
         return {}, 400
     print(request.json)
     parsed = parse_required_fields(request.json,
-                                   ["name", "address", "postcode", "city", "delivery_method", "payment_method"])
+                                   ["name", "address", "postcode", "city", "delivery_method ", "payment_method"])
     print(parsed)
     if parsed is None:
         return {}, 400
