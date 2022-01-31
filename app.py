@@ -24,6 +24,9 @@ def get_articles(comma_separated_ids: str):
 
 @app.route("/get_user/<id>")
 def get_user_endpoint(id: int):
+    user = database.get_user(id)
+    if user == {}:
+        return {"user": {}}, 404
     return {"user": database.get_user(id)}
 
 
@@ -31,15 +34,16 @@ def get_user_endpoint(id: int):
 def get_receipt():
     num = request.args["number"]
     pesel = request.args["pesel"]
-    print(num)
-    print(pesel)
     return {"erecepta": database.get_e_recepta(num, pesel)}
 
 
 @app.route("/add_to_basket", methods=["POST"])
 def add_to_basket():
     print(request.json["items"])
-    database.add_to_basket(request.json["user_id"], request.json["items"])
+    parsed = parse_required_fields(request.json, ["user_id", "items"])
+    if parsed is None:
+        return {}, 400
+    database.add_to_basket(parsed["user_id"], parsed["items"])
     return {}
 
 
@@ -94,7 +98,6 @@ def order(user_id):
     print(parsed)
     if parsed is None:
         return {}, 400
-
     if database.order(parsed, user_id):
         return {}, 200
     else:
@@ -106,6 +109,7 @@ def parse_required_fields(json, fields):
         return None
     parsed = {}
     for f in fields:
+        f = f.strip()
         if f not in json:
             return None
         else:

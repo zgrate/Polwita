@@ -1,5 +1,4 @@
 import datetime
-import os
 import random
 from typing import Optional
 
@@ -36,7 +35,7 @@ def configure_in_memory_db():
     Configures in-memory database for usage in testing
     """
     global engine
-    engine = create_engine('sqlite:///:memory:', echo=True)
+    engine = create_engine('sqlite:///:memory:', echo=False)
     engine.connect()
     Session.configure(bind=engine)
 
@@ -86,13 +85,15 @@ def get_basket(id):
     else:
         def tf(key):
             article: Optional[Artykul] = get_article(key)
+            if article is None:
+                return None
             return {
                 "id": key,
-                "article": row2dict(article) if article is not None else "not_found",
+                "article": row2dict(article),
                 "amount": basket[key]
             }
 
-        return list(map(tf, basket.keys()))
+        return list(filter(lambda d: d is not None, map(tf, basket.keys())))
 
 
 def get_article(id):
@@ -135,8 +136,10 @@ def get_user(id):
     with Session() as session:
         user = session.query(Uzytkownik).get(id)
         d = row2dict(user) if user is not None else {}
-        d.pop("Haslo")
-        d.pop("Pesel")
+        if "Haslo" in d:
+            d.pop("Haslo")
+        if "Pesel" in d:
+            d.pop("Pesel")
         return d
 
 
@@ -167,7 +170,6 @@ def fill_with_data():
             session.add(u)
 
     session.commit()
-    os.environ.get("DISCORD_TOKEN")
     if session.query(Artykul).count() == 0:
         for i in range(50):
             a = Artykul()
@@ -204,15 +206,19 @@ def get_e_recepta(numer, pesel):
 
 def add_to_basket(user_id: str, items: list):
     """
-    Adds item to the basket
+    Adds items to the basket
     :param user_id: user ID
     :param items: Items to add
     """
-    basket = baskets[int(user_id)]
-    print(items)
+    if user_id in baskets:
+        basket = baskets[int(user_id)]
+    else:
+        basket = {}
+
     for dic in items:
         amount = 0 if int(dic["id"]) not in basket else basket[int(dic["id"])]
         basket[int(dic["id"])] = amount + int(dic["amount"])
+    baskets[int(user_id)] = basket
 
 
 def update_basket(user_id, article_id, new_amount):
@@ -222,11 +228,17 @@ def update_basket(user_id, article_id, new_amount):
     :param article_id: Article ID
     :param new_amount: New amount
     """
-    basket = baskets[user_id]
+    user_id = int(user_id)
+    article_id = int(article_id)
+    if user_id in baskets:
+        basket = baskets[user_id]
+    else:
+        basket = {}
     if new_amount > 0:
         basket[article_id] = new_amount
     else:
         del basket[article_id]
+    baskets[user_id] = basket
 
 
 def get_payment(user_id):

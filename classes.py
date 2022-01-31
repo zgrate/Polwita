@@ -1,6 +1,5 @@
 # coding: utf-8
-from sqlalchemy import Column, Date, Float, ForeignKey, Integer, String, text
-from sqlalchemy.dialects.mysql import BIT, VARCHAR
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer, String, text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -15,8 +14,8 @@ class Artykul(Base):
     Nazwa = Column(String(60), nullable=False)
     Cena = Column(Float(asdecimal=True))
     LiczbaSzt = Column(Integer)
-    KodKreskowy = Column(VARCHAR(20), nullable=False, unique=True, server_default=text("''"))
-    CzyRecepta = Column(BIT(1))
+    KodKreskowy = Column(String(20), nullable=False, unique=True, server_default=text("''"))
+    CzyRecepta = Column(Boolean())
 
 
 class RodzajUzytkownika(Base):
@@ -84,7 +83,7 @@ class Dostawa(Base):
     SposobDostawy = Column(String(100))
     CenaDostawy = Column(Integer)
     AdresDostawy = Column(String(100))
-    PlatnoscPobranie = Column(BIT(1))
+    PlatnoscPobranie = Column(Boolean(1))
 
     Zamowienie = relationship('Zamowienie')
 
